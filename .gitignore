@@ -1,0 +1,32 @@
+# Runtime data
+workspaces/
+logs/
+state.db
+*.lock
+
+# User-specific config (use config.example.toml as template)
+config.toml
+
+# Generated plist (setup.sh creates this)
+com.*.porter*.plist
+
+# Firebase
+firebase-debug.log
+.firebaserc
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Internal development plans
+docs/plans/
+
+# Claude Code working state
+.claude/

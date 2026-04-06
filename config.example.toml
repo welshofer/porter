@@ -1,0 +1,126 @@
+# Porter Configuration
+# Reminder-Driven Autonomous Coding Agent
+#
+# Copy this file to config.toml and customize:
+#   cp config.example.toml config.toml
+#
+# Or run the interactive setup:
+#   ./setup.sh
+
+# ---------------------------------------------------------------------------
+# Daemon behavior
+# ---------------------------------------------------------------------------
+[daemon]
+poll_interval_seconds = 300        # How often to check for new tasks (5 min)
+max_concurrent_tasks = 5           # Max tasks running in parallel across all projects
+max_concurrent_per_project = 1     # One task per project at a time (prevents git conflicts)
+enable_parallel_projects = true    # Process multiple projects concurrently
+retry_max = 3                      # Max retries before marking task as ERROR
+retry_backoff_base_minutes = 5     # Exponential backoff: 5 min -> 20 min -> 80 min
+approval_timeout_days = 7          # Auto-reject PRDs not approved within this time
+
+# ---------------------------------------------------------------------------
+# File paths (~ is expanded to $HOME)
+# ---------------------------------------------------------------------------
+[paths]
+workspaces = "~/.claude/agents/porter/workspaces"
+logs = "~/.claude/agents/porter/logs"
+db = "~/.claude/agents/porter/state.db"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+[logging]
+level = "INFO"                     # DEBUG, INFO, WARNING, ERROR
+
+# ---------------------------------------------------------------------------
+# PRD repository — where generated plans are stored for review
+# Create this repo first: gh repo create prds --private
+# ---------------------------------------------------------------------------
+[prd_repo]
+url = "https://github.com/YOUR_USERNAME/prds"
+local_path = "~/.claude/agents/porter/workspaces/prds"
+
+# ---------------------------------------------------------------------------
+# CLI tool paths (setup.sh auto-detects these)
+# ---------------------------------------------------------------------------
+[tools]
+reminders_bin = "/opt/homebrew/bin/reminders"    # brew install keith/formulae/reminders-cli
+claude_bin = "/opt/homebrew/bin/claude"           # npm install -g @anthropic-ai/claude-code
+gh_bin = "/opt/homebrew/bin/gh"                   # brew install gh
+imsg_bin = ""                                     # Optional: path to imsg for iMessage notifications
+
+# ---------------------------------------------------------------------------
+# Reminders integration
+# ---------------------------------------------------------------------------
+[reminders]
+notes_fetch_mode = "applescript_fallback"  # "json_only", "applescript_fallback", or "applescript_only"
+applescript_timeout_seconds = 5
+
+# ---------------------------------------------------------------------------
+# Notifications (optional — requires imsg)
+# Set your phone number via the PORTER_PHONE environment variable,
+# or put it here directly.
+# ---------------------------------------------------------------------------
+[notification]
+phone_number = ""                  # Or set PORTER_PHONE env var
+notify_on_prd_ready = true
+notify_on_pr_created = true
+notify_on_error = true
+use_emojis = true
+
+# ---------------------------------------------------------------------------
+# GitHub Issues integration (optional — pull tasks from GitHub Issues)
+# ---------------------------------------------------------------------------
+[github_issues]
+enabled = false
+label = "porter"               # Only issues with this label are processed
+
+# ---------------------------------------------------------------------------
+# Claude Agent SDK settings
+# ---------------------------------------------------------------------------
+[claude]
+model = "opus"                     # "opus" for quality, "sonnet" for speed/cost
+timeout_seconds = 1800             # 30 min for PRD generation
+permission_mode = "bypassPermissions"
+max_turns = 50                     # Default turns (overridden per task type)
+stream_output = true
+impl_max_turns = 150               # Agent session turns for implementation
+impl_timeout_seconds = 3600        # 60 min agent timeout
+# daily_budget_usd = 50.0          # Optional: daily spending cap across all tasks
+# max_cost_per_task_usd = 15.0     # Optional: per-task spending cap
+
+# ---------------------------------------------------------------------------
+# Testing
+# ---------------------------------------------------------------------------
+[testing]
+run_tests_before_pr = true         # Run tests before creating PR
+test_timeout_seconds = 600         # 10 minute timeout for test runs
+
+# ---------------------------------------------------------------------------
+# Merge behavior
+# ---------------------------------------------------------------------------
+[merge]
+strategy = "squash"                # "squash", "merge", or "rebase"
+auto_merge_on_review_complete = false
+
+# ---------------------------------------------------------------------------
+# Git
+# ---------------------------------------------------------------------------
+[git]
+clone_depth = 1                    # Shallow clone (faster). Set to 0 for full clone.
+
+# ---------------------------------------------------------------------------
+# Project-to-repo mappings
+#
+# Key = Apple Reminders list name (case-sensitive)
+# Value = GitHub repo URL
+#
+# To add a new project:
+#   1. Create a Reminders list with the project name
+#   2. Add a mapping here
+#   3. Create tasks in that list with prefix "Task: "
+# ---------------------------------------------------------------------------
+[projects]
+# "MyProject" = "https://github.com/username/my-project"
+# "MyAPI" = "https://github.com/username/my-api"
