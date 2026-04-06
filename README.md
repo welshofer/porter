@@ -64,7 +64,7 @@ the reminder to merge ───────────────────�
 - **[GitHub CLI](https://cli.github.com/)** (`gh`)
 - **[reminders-cli](https://github.com/keith/reminders-cli)**
 - **An Anthropic API key** (set as `ANTHROPIC_API_KEY` environment variable)
-- Optional: [imsg](https://github.com/nicklama/imsg) for iMessage notifications
+- Optional: [imsg](https://github.com/steipete/imsg) for iMessage notifications
 
 ---
 
