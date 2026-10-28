@@ -112,12 +112,13 @@ test_command = "make test"
 |-----|------|---------|-------------|
 | `enabled` | bool | false | Enable GitHub Issues as a task source. |
 | `label` | string | `porter` | Label to filter issues by. |
+| `trusted_authors` | list of strings | `[]` | GitHub logins whose issues, issue comments and PR review comments are passed to the agent. Text from anyone else is ignored and logged. Empty means the repo's owner only. |
 
 ## `[pr_review]`
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `auto_respond` | bool | false | Automatically address PR review comments. |
+| `auto_respond` | bool | false | Automatically address PR review comments from `[github_issues] trusted_authors`. |
 | `check_interval_seconds` | int | 3600 | How often to check for new review comments. |
 
 ## Environment Variables

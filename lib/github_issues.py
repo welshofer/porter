@@ -8,16 +8,53 @@ import json
 import logging
 import re
 import subprocess
-from typing import Dict, List
+from typing import Dict, Iterable, List, Optional
+
+
+def repo_owner(repo_url: str) -> Optional[str]:
+    """The owner login in a GitHub repo URL, or None if it isn't one."""
+    match = re.search(r"github\.com[:/]([^/]+)/[^/]+?(?:\.git)?$", repo_url)
+    return match.group(1) if match else None
 
 
 class GitHubIssuesClient:
-    """Fetches and manages tasks from GitHub Issues."""
+    """Fetches and manages tasks from GitHub Issues.
 
-    def __init__(self, gh_bin: str, label: str = "porter"):
+    Issue bodies, issue comments and PR review comments become agent prompts,
+    and on a public repo anyone can write them. Only text written by a trusted
+    author is returned: the logins in ``trusted_authors``, or, when that is
+    empty, the repo's owner.
+    """
+
+    def __init__(self, gh_bin: str, label: str = "porter",
+                 trusted_authors: Optional[Iterable[str]] = None):
         self.gh = gh_bin
         self.label = label
+        self.trusted_authors = {a.lower() for a in (trusted_authors or []) if a}
         self.logger = logging.getLogger('porter')
+
+    def is_trusted(self, repo_url: str, login: Optional[str]) -> bool:
+        """Whether text written by ``login`` may reach an agent for this repo."""
+        if not login:
+            return False
+        if self.trusted_authors:
+            return login.lower() in self.trusted_authors
+        owner = repo_owner(repo_url)
+        return bool(owner) and login.lower() == owner.lower()
+
+    def _trusted_only(self, repo_url: str, items: List[Dict], kind: str,
+                      login_of) -> List[Dict]:
+        """Drop items whose author isn't trusted, logging each one dropped."""
+        kept = []
+        for item in items:
+            login = login_of(item)
+            if self.is_trusted(repo_url, login):
+                kept.append(item)
+            else:
+                self.logger.warning(
+                    "Ignoring %s from untrusted author %r on %s", kind, login, repo_url
+                )
+        return kept
 
     def get_issues_for_repo(self, repo_url: str) -> List[Dict]:
         """Get open issues with the porter label from a repo."""
@@ -35,7 +72,7 @@ class GitHubIssuesClient:
                     "--repo", repo,
                     "--label", self.label,
                     "--state", "open",
-                    "--json", "number,title,body,labels,createdAt"
+                    "--json", "number,title,body,labels,createdAt,author"
                 ],
                 capture_output=True,
                 text=True,
@@ -46,7 +83,10 @@ class GitHubIssuesClient:
                 self.logger.warning(f"Failed to fetch issues from {repo}: {result.stderr}")
                 return []
 
-            return json.loads(result.stdout)
+            return self._trusted_only(
+                repo_url, json.loads(result.stdout), "issue",
+                lambda i: (i.get("author") or {}).get("login"),
+            )
 
         except subprocess.TimeoutExpired:
             self.logger.error(f"Timeout fetching issues from {repo}")
@@ -82,7 +122,7 @@ class GitHubIssuesClient:
             return []
 
     def get_issue_comments(self, repo_url: str, issue_number: int) -> List[Dict]:
-        """Get issue comments as JSON objects."""
+        """Get issue comments by trusted authors as JSON objects."""
         match = re.search(r"github\.com[:/]([^/]+/[^/]+?)(?:\.git)?$", repo_url)
         if not match:
             return []
@@ -101,7 +141,10 @@ class GitHubIssuesClient:
             )
             if result.returncode != 0:
                 return []
-            return json.loads(result.stdout)
+            return self._trusted_only(
+                repo_url, json.loads(result.stdout), "issue comment",
+                lambda c: (c.get("user") or {}).get("login"),
+            )
         except (subprocess.TimeoutExpired, json.JSONDecodeError):
             return []
 
@@ -185,13 +228,15 @@ class GitHubIssuesClient:
                         "author": review.get("author", {}).get("login", "")
                     })
 
-            return pending_comments
+            return self._trusted_only(
+                repo_url, pending_comments, "PR review", lambda r: r.get("author")
+            )
 
         except (subprocess.TimeoutExpired, json.JSONDecodeError):
             return []
 
     def get_pr_review_comments(self, repo_url: str, pr_number: int) -> List[Dict]:
-        """Get inline review comments on a PR."""
+        """Get inline review comments on a PR by trusted authors."""
         match = re.search(r"github\.com[:/]([^/]+/[^/]+?)(?:\.git)?$", repo_url)
         if not match:
             return []
@@ -203,7 +248,7 @@ class GitHubIssuesClient:
                 [
                     self.gh, "api",
                     f"repos/{repo}/pulls/{pr_number}/comments",
-                    "--jq", ".[].{path: .path, line: .line, body: .body, id: .id}"
+                    "--jq", ".[] | {path: .path, line: .line, body: .body, id: .id, author: .user.login}"
                 ],
                 capture_output=True,
                 text=True,
@@ -220,7 +265,9 @@ class GitHubIssuesClient:
                         comments.append(json.loads(line))
                     except json.JSONDecodeError:
                         pass
-            return comments
+            return self._trusted_only(
+                repo_url, comments, "PR review comment", lambda c: c.get("author")
+            )
 
         except subprocess.TimeoutExpired:
             return []
