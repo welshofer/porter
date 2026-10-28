@@ -674,7 +674,9 @@ def process_single_task(config: Config, task_id: str, logger: logging.Logger) ->
 
     github_issues = None
     if config.github_issues_enabled:
-        github_issues = GitHubIssuesClient(config.gh_bin, config.github_issues_label)
+        github_issues = GitHubIssuesClient(
+            config.gh_bin, config.github_issues_label, config.github_trusted_authors
+        )
 
     orchestrator = OrchestratorV4(
         config=config,
@@ -1219,7 +1221,9 @@ Priority System:
 
     github_issues = None
     if config.github_issues_enabled:
-        github_issues = GitHubIssuesClient(config.gh_bin, config.github_issues_label)
+        github_issues = GitHubIssuesClient(
+            config.gh_bin, config.github_issues_label, config.github_trusted_authors
+        )
 
     orchestrator = OrchestratorV4(
         config=config,

@@ -75,6 +75,10 @@ use_emojis = true
 [github_issues]
 enabled = false
 label = "porter"               # Only issues with this label are processed
+# Logins whose issues, issue comments and PR review comments reach the agent.
+# Anyone can comment on a public repo, so everyone else is ignored.
+# Leave empty to trust the repo's owner only.
+trusted_authors = []
 
 # ---------------------------------------------------------------------------
 # Claude Agent SDK settings

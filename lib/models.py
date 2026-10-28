@@ -254,6 +254,9 @@ class Config:
     # GitHub Issues integration
     github_issues_enabled: bool = False
     github_issues_label: str = "porter"
+    # Logins whose issues, issue comments and PR reviews may reach the agent.
+    # Empty means the repo's owner only.
+    github_trusted_authors: List[str] = field(default_factory=list)
 
     # Testing settings
     run_tests_before_pr: bool = True
@@ -462,6 +465,7 @@ class Config:
         github_cfg = data.get("github_issues", {})
         config.github_issues_enabled = github_cfg.get("enabled", False)
         config.github_issues_label = github_cfg.get("label", "porter")
+        config.github_trusted_authors = list(github_cfg.get("trusted_authors", []))
 
         # Testing settings
         testing_cfg = data.get("testing", {})
